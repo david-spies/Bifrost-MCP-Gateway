@@ -1,0 +1,274 @@
+{
+  "tools": [
+    {
+      "name": "read_filesystem_file",
+      "category": "Filesystem",
+      "description": "Reads the content of a file from the local filesystem safely.",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "path": { "type": "string", "description": "Absolute path to the file." }
+        },
+        "required": ["path"]
+      }
+    },
+    {
+      "name": "write_filesystem_file",
+      "category": "Filesystem",
+      "description": "Writes or overwrites content to a file on the local filesystem.",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "path":    { "type": "string", "description": "Absolute path to destination." },
+          "content": { "type": "string", "description": "Text content to write." }
+        },
+        "required": ["path", "content"]
+      }
+    },
+    {
+      "name": "list_filesystem_directory",
+      "category": "Filesystem",
+      "description": "Lists files and subdirectories inside a given directory path.",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "path":      { "type": "string",  "description": "Absolute directory path." },
+          "recursive": { "type": "boolean", "description": "Traverse subdirectories." }
+        },
+        "required": ["path"]
+      }
+    },
+    {
+      "name": "delete_filesystem_file",
+      "category": "Filesystem",
+      "description": "Safely deletes a single file (not directories) from the filesystem.",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "path": { "type": "string", "description": "Absolute file path to delete." }
+        },
+        "required": ["path"]
+      }
+    },
+    {
+      "name": "execute_postgres_query",
+      "category": "Database",
+      "description": "Executes a read-only SELECT SQL query against the production PostgreSQL instance.",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "query":    { "type": "string",  "description": "Valid SELECT SQL statement." },
+          "timeout":  { "type": "integer", "description": "Query timeout in seconds (default 30)." }
+        },
+        "required": ["query"]
+      }
+    },
+    {
+      "name": "execute_postgres_write",
+      "category": "Database",
+      "description": "Executes an INSERT, UPDATE, or DELETE statement on the PostgreSQL database.",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "statement": { "type": "string", "description": "Write SQL statement." },
+          "params":    { "type": "array",  "description": "Parameterized query values.", "items": {} }
+        },
+        "required": ["statement"]
+      }
+    },
+    {
+      "name": "list_postgres_tables",
+      "category": "Database",
+      "description": "Returns all table names and schemas in the current PostgreSQL database.",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "schema_name": { "type": "string", "description": "PostgreSQL schema (default: public)." }
+        }
+      }
+    },
+    {
+      "name": "query_redis_key",
+      "category": "Database",
+      "description": "Reads a value from the Redis cache by key.",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "key": { "type": "string", "description": "Redis key to retrieve." }
+        },
+        "required": ["key"]
+      }
+    },
+    {
+      "name": "create_github_pull_request",
+      "category": "GitHub API",
+      "description": "Creates a new pull request on the specified GitHub repository.",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "repo":  { "type": "string", "description": "Format: owner/repo." },
+          "title": { "type": "string", "description": "Pull request title." },
+          "head":  { "type": "string", "description": "Source branch name." },
+          "base":  { "type": "string", "description": "Target branch (default: main)." },
+          "body":  { "type": "string", "description": "PR description body (Markdown)." }
+        },
+        "required": ["repo", "title", "head"]
+      }
+    },
+    {
+      "name": "list_github_issues",
+      "category": "GitHub API",
+      "description": "Lists open issues on a GitHub repository with optional label filtering.",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "repo":   { "type": "string", "description": "Format: owner/repo." },
+          "labels": { "type": "string", "description": "Comma-separated label names." },
+          "state":  { "type": "string", "enum": ["open", "closed", "all"] }
+        },
+        "required": ["repo"]
+      }
+    },
+    {
+      "name": "create_github_issue",
+      "category": "GitHub API",
+      "description": "Creates a new issue on a GitHub repository.",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "repo":   { "type": "string", "description": "Format: owner/repo." },
+          "title":  { "type": "string", "description": "Issue title." },
+          "body":   { "type": "string", "description": "Issue body (Markdown)." },
+          "labels": { "type": "array",  "description": "Label names.", "items": { "type": "string" } }
+        },
+        "required": ["repo", "title"]
+      }
+    },
+    {
+      "name": "merge_github_pull_request",
+      "category": "GitHub API",
+      "description": "Merges an open pull request by its PR number.",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "repo":         { "type": "string",  "description": "Format: owner/repo." },
+          "pull_number":  { "type": "integer", "description": "The pull request number." },
+          "merge_method": { "type": "string",  "enum": ["merge", "squash", "rebase"] }
+        },
+        "required": ["repo", "pull_number"]
+      }
+    },
+    {
+      "name": "send_slack_message",
+      "category": "Slack",
+      "description": "Posts a message to a Slack channel via the Slack Web API.",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "channel": { "type": "string", "description": "Channel name or ID (e.g. #general)." },
+          "text":    { "type": "string", "description": "Message text (supports mrkdwn)." },
+          "blocks":  { "type": "array",  "description": "Block Kit layout blocks.", "items": {} }
+        },
+        "required": ["channel", "text"]
+      }
+    },
+    {
+      "name": "create_slack_thread_reply",
+      "category": "Slack",
+      "description": "Posts a threaded reply to an existing Slack message.",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "channel":   { "type": "string", "description": "Channel ID." },
+          "thread_ts": { "type": "string", "description": "Timestamp of the parent message." },
+          "text":      { "type": "string", "description": "Reply text." }
+        },
+        "required": ["channel", "thread_ts", "text"]
+      }
+    },
+    {
+      "name": "trigger_github_actions_workflow",
+      "category": "CI/CD",
+      "description": "Manually triggers a GitHub Actions workflow_dispatch event.",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "repo":     { "type": "string", "description": "Format: owner/repo." },
+          "workflow": { "type": "string", "description": "Workflow filename or ID." },
+          "ref":      { "type": "string", "description": "Branch or tag to run on." },
+          "inputs":   { "type": "object", "description": "Workflow dispatch inputs." }
+        },
+        "required": ["repo", "workflow", "ref"]
+      }
+    },
+    {
+      "name": "get_github_actions_run_status",
+      "category": "CI/CD",
+      "description": "Fetches the status and conclusion of a GitHub Actions workflow run.",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "repo":   { "type": "string",  "description": "Format: owner/repo." },
+          "run_id": { "type": "integer", "description": "The workflow run ID." }
+        },
+        "required": ["repo", "run_id"]
+      }
+    },
+    {
+      "name": "send_datadog_metric",
+      "category": "Observability",
+      "description": "Emits a custom metric to Datadog via the metrics API.",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "metric": { "type": "string", "description": "Dot-separated metric name." },
+          "points": { "type": "array",  "description": "[[timestamp, value], ...]", "items": {} },
+          "tags":   { "type": "array",  "description": "tag:value strings.", "items": { "type": "string" } }
+        },
+        "required": ["metric", "points"]
+      }
+    },
+    {
+      "name": "query_cloudwatch_logs",
+      "category": "Observability",
+      "description": "Runs a CloudWatch Insights query against a log group.",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "log_group":   { "type": "string", "description": "CloudWatch log group name." },
+          "query_string":{ "type": "string", "description": "CloudWatch Insights query." },
+          "start_time":  { "type": "string", "description": "ISO-8601 start time." },
+          "end_time":    { "type": "string", "description": "ISO-8601 end time." }
+        },
+        "required": ["log_group", "query_string", "start_time", "end_time"]
+      }
+    },
+    {
+      "name": "invoke_aws_lambda",
+      "category": "Cloud Compute",
+      "description": "Invokes an AWS Lambda function synchronously and returns its response.",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "function_name": { "type": "string", "description": "Lambda function name or ARN." },
+          "payload":       { "type": "object", "description": "JSON event payload." }
+        },
+        "required": ["function_name"]
+      }
+    },
+    {
+      "name": "list_s3_bucket_objects",
+      "category": "Cloud Storage",
+      "description": "Lists objects in an S3 bucket with optional prefix filtering.",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "bucket": { "type": "string", "description": "S3 bucket name." },
+          "prefix": { "type": "string", "description": "Key prefix to filter by." },
+          "max_keys":{ "type": "integer","description": "Max results to return (default 100)." }
+        },
+        "required": ["bucket"]
+      }
+    }
+  ]
+}
