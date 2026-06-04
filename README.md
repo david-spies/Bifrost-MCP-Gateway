@@ -1,4 +1,4 @@
-![Bifrost-MCP-Gateway](docs/Bifrost-MCP-Gateway.svg)
+![Bifrost-MCP-Gateway](docs/bifrost_mcp_banner.svg)
 
 # ⚡ Bifrost-MCP Gateway
 
