@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bifrost · MCP Gateway</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg:        #050810;
+      --surface:   #0c1020;
+      --card:      #101828;
+      --border:    #1c2a40;
+      --accent:    #00e5ff;
+      --accent2:   #7c3aed;
+      --accent3:   #f59e0b;
+      --success:   #10b981;
+      --danger:    #ef4444;
+      --text:      #e2eaf8;
+      --muted:     #5a7a9a;
+      --mono:      'JetBrains Mono', monospace;
+      --sans:      'Syne', sans-serif;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── Grid noise overlay ── */
+    body::before {
+      content: '';
+      position: fixed; inset: 0; z-index: 0;
+      background-image:
+        linear-gradient(rgba(0,229,255,.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,229,255,.025) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+    }
+
+    /* ── Ambient glow ── */
+    .glow-orb {
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(120px);
+      pointer-events: none;
+      z-index: 0;
+    }
+    .glow-orb.a { width:600px; height:600px; top:-200px; left:-100px; background: radial-gradient(circle, rgba(0,229,255,.08), transparent 70%); }
+    .glow-orb.b { width:500px; height:500px; bottom:-150px; right:-100px; background: radial-gradient(circle, rgba(124,58,237,.09), transparent 70%); }
+
+    /* ── Layout ── */
+    #app { position: relative; z-index: 1; display: flex; flex-direction: column; min-height: 100vh; }
+
+    /* ── Header ── */
+    header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 20px 40px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(5,8,16,.85);
+      backdrop-filter: blur(12px);
+      position: sticky; top: 0; z-index: 100;
+    }
+
+    .logo {
+      display: flex; align-items: center; gap: 12px;
+    }
+    .logo-icon {
+      width: 38px; height: 38px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-radius: 10px;
+      display: grid; place-items: center;
+      font-size: 18px;
+    }
+    .logo h1 { font-size: 1.25rem; font-weight: 800; letter-spacing: -.02em; }
+    .logo span { color: var(--accent); }
+
+    .header-right { display: flex; align-items: center; gap: 16px; }
+
+    .status-pill {
+      display: flex; align-items: center; gap: 7px;
+      font-family: var(--mono); font-size: .75rem;
+      color: var(--success);
+      background: rgba(16,185,129,.1);
+      border: 1px solid rgba(16,185,129,.25);
+      border-radius: 20px; padding: 5px 14px;
+    }
+    .status-pill .dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: var(--success);
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%,100% { opacity:1; transform:scale(1); }
+      50%      { opacity:.5; transform:scale(1.3); }
+    }
+
+    .uptime-tag {
+      font-family: var(--mono); font-size: .72rem; color: var(--muted);
+    }
+
+    /* ── Main ── */
+    main { flex: 1; padding: 36px 40px; display: flex; flex-direction: column; gap: 32px; }
+
+    /* ── Stats row ── */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 16px;
+    }
+
+    .stat-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 22px 24px;
+      display: flex; flex-direction: column; gap: 8px;
+      transition: border-color .2s, transform .2s;
+      animation: fadeUp .4s both;
+    }
+    .stat-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+
+    @keyframes fadeUp {
+      from { opacity:0; transform: translateY(16px); }
+      to   { opacity:1; transform: translateY(0); }
+    }
+
+    .stat-label {
+      font-size: .7rem; font-weight: 600; letter-spacing: .1em;
+      text-transform: uppercase; color: var(--muted);
+    }
+    .stat-value {
+      font-size: 2rem; font-weight: 800;
+      font-family: var(--mono);
+      background: linear-gradient(135deg, var(--text), var(--accent));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .stat-sub { font-size: .72rem; color: var(--muted); font-family: var(--mono); }
+    .stat-card.accent  { border-color: rgba(0,229,255,.3); }
+    .stat-card.purple  .stat-value { background: linear-gradient(135deg, var(--text), var(--accent2)); -webkit-background-clip: text; }
+    .stat-card.amber   .stat-value { background: linear-gradient(135deg, var(--text), var(--accent3)); -webkit-background-clip: text; }
+    .stat-card.danger  .stat-value { background: linear-gradient(135deg, var(--text), var(--danger));  -webkit-background-clip: text; }
+    .stat-card.success .stat-value { background: linear-gradient(135deg, var(--text), var(--success)); -webkit-background-clip: text; }
+
+    /* ── Two-col layout ── */
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    @media (max-width: 900px) { .two-col { grid-template-columns: 1fr; } }
+
+    /* ── Panel ── */
+    .panel {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      display: flex; flex-direction: column;
+      overflow: hidden;
+      animation: fadeUp .45s both;
+    }
+
+    .panel-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 18px 22px;
+      border-bottom: 1px solid var(--border);
+    }
+    .panel-title {
+      font-size: .8rem; font-weight: 700; letter-spacing: .08em;
+      text-transform: uppercase; color: var(--muted);
+    }
+    .panel-badge {
+      font-family: var(--mono); font-size: .7rem;
+      padding: 3px 10px; border-radius: 20px;
+    }
+    .panel-badge.cyan   { background:rgba(0,229,255,.12);  color: var(--accent); }
+    .panel-badge.purple { background:rgba(124,58,237,.12); color: #a78bfa; }
+    .panel-badge.green  { background:rgba(16,185,129,.12); color: var(--success); }
+
+    .panel-body { padding: 20px 22px; flex: 1; overflow: hidden; }
+
+    /* ── Token bar ── */
+    .token-section { display: flex; flex-direction: column; gap: 16px; }
+
+    .token-row { display: flex; flex-direction: column; gap: 6px; }
+    .token-row-header { display: flex; justify-content: space-between; font-size: .78rem; }
+    .token-row-label { color: var(--muted); font-family: var(--mono); }
+    .token-row-val   { color: var(--text);  font-family: var(--mono); font-weight: 600; }
+
+    .bar-track {
+      height: 8px; border-radius: 99px;
+      background: var(--border); overflow: hidden;
+    }
+    .bar-fill {
+      height: 100%; border-radius: 99px;
+      transition: width .8s cubic-bezier(.4,0,.2,1);
+    }
+    .bar-fill.full    { background: linear-gradient(90deg, var(--danger), #f97316); }
+    .bar-fill.saved   { background: linear-gradient(90deg, var(--accent), var(--success)); }
+    .bar-fill.hydrated{ background: linear-gradient(90deg, var(--accent2), var(--accent)); }
+
+    .token-summary {
+      margin-top: 8px;
+      padding: 14px 16px;
+      background: rgba(0,229,255,.06);
+      border: 1px solid rgba(0,229,255,.15);
+      border-radius: 10px;
+      font-family: var(--mono); font-size: .78rem;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .token-summary .big { font-size: 1.4rem; font-weight: 700; color: var(--accent); }
+
+    /* ── Intent tester ── */
+    .tester { display: flex; flex-direction: column; gap: 12px; }
+
+    .input-row { display: flex; gap: 10px; }
+
+    input[type=text], textarea {
+      flex: 1;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 14px;
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: .82rem;
+      outline: none;
+      transition: border-color .2s;
+    }
+    input[type=text]:focus, textarea:focus { border-color: var(--accent); }
+
+    textarea { resize: vertical; min-height: 90px; font-size: .78rem; }
+
+    .btn {
+      padding: 9px 20px; border-radius: 9px; border: none; cursor: pointer;
+      font-family: var(--sans); font-size: .8rem; font-weight: 700;
+      letter-spacing: .04em; transition: opacity .15s, transform .1s;
+    }
+    .btn:active { transform: scale(.97); }
+    .btn.primary { background: linear-gradient(135deg, var(--accent), #0080ff); color: #000; }
+    .btn.purple  { background: linear-gradient(135deg, var(--accent2), #9333ea); color: #fff; }
+    .btn.sm      { padding: 6px 14px; font-size: .72rem; }
+    .btn:disabled { opacity: .4; cursor: default; }
+
+    /* ── Results box ── */
+    .result-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px;
+      font-family: var(--mono); font-size: .73rem;
+      color: #94b8d0;
+      max-height: 240px; overflow-y: auto;
+      white-space: pre-wrap;
+      word-break: break-word;
+      line-height: 1.55;
+    }
+    .result-box .key   { color: var(--accent); }
+    .result-box .val   { color: #c9e8ff; }
+    .result-box .str   { color: var(--success); }
+    .result-box .num   { color: var(--accent3); }
+    .result-box .bool  { color: #f472b6; }
+    .result-box .empty { color: var(--muted); font-style: italic; }
+    .result-box::-webkit-scrollbar { width:4px; }
+    .result-box::-webkit-scrollbar-track { background: transparent; }
+    .result-box::-webkit-scrollbar-thumb { background: var(--border); border-radius:4px; }
+
+    /* ── Event feed ── */
+    .event-feed { display: flex; flex-direction: column; gap: 0; max-height: 320px; overflow-y: auto; }
+    .event-feed::-webkit-scrollbar { width:3px; }
+    .event-feed::-webkit-scrollbar-thumb { background: var(--border); border-radius:4px; }
+
+    .event-item {
+      display: flex; align-items: flex-start; gap: 12px;
+      padding: 10px 0;
+      border-bottom: 1px solid rgba(28,42,64,.6);
+      animation: slideIn .25s both;
+    }
+    @keyframes slideIn {
+      from { opacity:0; transform:translateX(-8px); }
+      to   { opacity:1; transform:translateX(0); }
+    }
+
+    .event-icon {
+      width: 28px; height: 28px; border-radius: 8px;
+      display: grid; place-items: center;
+      flex-shrink: 0; font-size: .85rem;
+    }
+    .event-icon.init       { background: rgba(0,229,255,.15);  color: var(--accent); }
+    .event-icon.resolve    { background: rgba(16,185,129,.15); color: var(--success); }
+    .event-icon.orchestrate{ background: rgba(124,58,237,.15); color: #a78bfa; }
+    .event-icon.blocked    { background: rgba(239,68,68,.15);  color: var(--danger); }
+    .event-icon.register   { background: rgba(245,158,11,.15); color: var(--accent3); }
+
+    .event-body { flex: 1; min-width: 0; }
+    .event-detail { font-size: .78rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .event-time   { font-family: var(--mono); font-size: .66rem; color: var(--muted); margin-top: 2px; }
+
+    /* ── Registry table ── */
+    .registry-wrap { overflow: auto; max-height: 360px; }
+    .registry-wrap::-webkit-scrollbar { width:4px; height:4px; }
+    .registry-wrap::-webkit-scrollbar-thumb { background: var(--border); border-radius:4px; }
+
+    table { width: 100%; border-collapse: collapse; }
+    thead th {
+      text-align: left; font-size: .68rem; font-weight: 700;
+      letter-spacing: .08em; text-transform: uppercase;
+      color: var(--muted); padding: 0 12px 10px;
+      position: sticky; top: 0; background: var(--card);
+    }
+    tbody tr {
+      border-top: 1px solid var(--border);
+      transition: background .15s;
+    }
+    tbody tr:hover { background: rgba(0,229,255,.03); }
+    td { padding: 9px 12px; font-size: .78rem; vertical-align: middle; }
+    td.name-col { font-family: var(--mono); color: var(--accent); font-size: .74rem; }
+    td.cat-col  { }
+
+    .cat-badge {
+      display: inline-block; font-size: .65rem; font-weight: 700;
+      letter-spacing: .05em; text-transform: uppercase;
+      padding: 2px 9px; border-radius: 99px;
+    }
+    .cat-badge.Filesystem    { background:rgba(16,185,129,.12); color:var(--success); }
+    .cat-badge.Database      { background:rgba(0,229,255,.1);   color:var(--accent); }
+    .cat-badge.GitHub\ API   { background:rgba(124,58,237,.12); color:#a78bfa; }
+    .cat-badge.Slack         { background:rgba(245,158,11,.12); color:var(--accent3); }
+    .cat-badge.CI\/CD        { background:rgba(239,68,68,.1);   color:var(--danger); }
+    .cat-badge.Observability { background:rgba(96,165,250,.1);  color:#60a5fa; }
+    .cat-badge.Cloud\ Compute{ background:rgba(251,113,133,.1); color:#fb7185; }
+    .cat-badge.Cloud\ Storage{ background:rgba(52,211,153,.1);  color:#34d399; }
+    .cat-badge.Testing       { background:rgba(165,180,252,.1); color:#a5b4fc; }
+
+    td.desc-col { color: var(--muted); font-size: .75rem; max-width: 260px;
+                  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    td.action-col { text-align: right; }
+
+    .del-btn {
+      background: none; border: 1px solid rgba(239,68,68,.3); color: var(--danger);
+      border-radius: 6px; padding: 3px 10px; font-size: .7rem; cursor: pointer;
+      font-family: var(--mono); transition: background .15s;
+    }
+    .del-btn:hover { background: rgba(239,68,68,.1); }
+
+    /* ── Orchestrate panel ── */
+    .orch-section { display: flex; flex-direction: column; gap: 12px; }
+
+    /* ── Loading spinner ── */
+    .spin {
+      display: inline-block; width: 14px; height: 14px;
+      border: 2px solid rgba(0,229,255,.2);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin .6s linear infinite;
+      vertical-align: middle; margin-right: 6px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Footer ── */
+    footer {
+      padding: 16px 40px;
+      border-top: 1px solid var(--border);
+      display: flex; justify-content: space-between; align-items: center;
+      font-family: var(--mono); font-size: .68rem; color: var(--muted);
+    }
+    footer a { color: var(--accent); text-decoration: none; }
+
+    /* ── Tabs ── */
+    .tabs { display: flex; gap: 4px; margin-bottom: 16px; }
+    .tab {
+      padding: 7px 16px; border-radius: 8px; cursor: pointer;
+      font-size: .75rem; font-weight: 600; letter-spacing: .04em;
+      transition: background .15s, color .15s;
+      color: var(--muted); background: transparent; border: 1px solid transparent;
+    }
+    .tab.active { background: rgba(0,229,255,.12); color: var(--accent); border-color: rgba(0,229,255,.25); }
+    .tab:hover:not(.active) { background: rgba(255,255,255,.04); color: var(--text); }
+
+    /* Error toast */
+    .toast {
+      position: fixed; bottom: 28px; right: 28px; z-index: 999;
+      background: #1a0a0a; border: 1px solid var(--danger);
+      color: var(--danger); border-radius: 10px;
+      padding: 12px 20px; font-family: var(--mono); font-size: .78rem;
+      animation: fadeUp .3s both;
+    }
+  </style>
+</head>
+<body>
+<div id="app">
+  <div class="glow-orb a"></div>
+  <div class="glow-orb b"></div>
+
+  <header>
+    <div class="logo">
+      <div class="logo-icon">⚡</div>
+      <h1>Bifrost<span>·</span>MCP</h1>
+    </div>
+    <div class="header-right">
+      <span class="uptime-tag" id="uptime-tag">uptime: —</span>
+      <div class="status-pill" id="status-pill">
+        <div class="dot"></div>
+        <span id="status-label">connecting…</span>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <!-- Stat cards -->
+    <div class="stats-row" id="stats-row">
+      <div class="stat-card accent">
+        <div class="stat-label">Tokens Saved</div>
+        <div class="stat-value" id="s-tokens">—</div>
+        <div class="stat-sub">cumulative across all requests</div>
+      </div>
+      <div class="stat-card success">
+        <div class="stat-label">Total Requests</div>
+        <div class="stat-value" id="s-reqs">—</div>
+        <div class="stat-sub">gateway lifecycle</div>
+      </div>
+      <div class="stat-card purple">
+        <div class="stat-label">Schema Resolves</div>
+        <div class="stat-value" id="s-resolves">—</div>
+        <div class="stat-sub">lazy-load calls</div>
+      </div>
+      <div class="stat-card amber">
+        <div class="stat-label">Orchestrations</div>
+        <div class="stat-value" id="s-orch">—</div>
+        <div class="stat-sub">client-side scripts run</div>
+      </div>
+      <div class="stat-card danger">
+        <div class="stat-label">Blocked Scripts</div>
+        <div class="stat-value" id="s-blocked">—</div>
+        <div class="stat-sub">OWASP security stops</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Registry Size</div>
+        <div class="stat-value" id="s-registry">—</div>
+        <div class="stat-sub">tools indexed</div>
+      </div>
+    </div>
+
+    <!-- Row 2: token viz + intent tester -->
+    <div class="two-col">
+
+      <!-- Token Savings Panel -->
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Token Budget Visualizer</span>
+          <span class="panel-badge cyan" id="reduction-badge">—% reduction</span>
+        </div>
+        <div class="panel-body">
+          <div class="token-section">
+            <div class="token-row">
+              <div class="token-row-header">
+                <span class="token-row-label">Full Registry (naive)</span>
+                <span class="token-row-val" id="tok-full">—</span>
+              </div>
+              <div class="bar-track"><div class="bar-fill full" id="bar-full" style="width:100%"></div></div>
+            </div>
+            <div class="token-row">
+              <div class="token-row-header">
+                <span class="token-row-label">Compressed Catalog (Bifrost)</span>
+                <span class="token-row-val" id="tok-comp">—</span>
+              </div>
+              <div class="bar-track"><div class="bar-fill saved" id="bar-comp" style="width:0%"></div></div>
+            </div>
+            <div class="token-row" id="hydrated-row" style="display:none">
+              <div class="token-row-header">
+                <span class="token-row-label">Last Resolved (hydrated)</span>
+                <span class="token-row-val" id="tok-hydr">—</span>
+              </div>
+              <div class="bar-track"><div class="bar-fill hydrated" id="bar-hydr" style="width:0%"></div></div>
+            </div>
+            <div class="token-summary">
+              <div>
+                <div style="font-size:.65rem;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;">Tokens Saved This Session</div>
+                <div class="big" id="tok-saved-big">—</div>
+              </div>
+              <div style="text-align:right">
+                <div style="font-size:.65rem;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;">Est. Cost Avoided</div>
+                <div style="font-size:1.1rem;font-weight:700;color:var(--success)" id="cost-saved">—</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Intent Resolver -->
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Live Intent Resolver</span>
+          <span class="panel-badge green">on-demand</span>
+        </div>
+        <div class="panel-body">
+          <div class="tester">
+            <div class="input-row">
+              <input type="text" id="intent-input" placeholder="e.g. github, postgres, filesystem, slack…" />
+              <button class="btn primary" id="resolve-btn" onclick="resolveIntent()">Resolve</button>
+            </div>
+            <div class="result-box" id="resolve-result"><span class="empty">Enter an intent keyword above to lazy-load matching tool schemas.</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Row 3: Orchestrator + Event Feed -->
+    <div class="two-col">
+
+      <!-- Orchestration Sandbox -->
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Orchestration Sandbox</span>
+          <span class="panel-badge purple">security-sandboxed</span>
+        </div>
+        <div class="panel-body">
+          <div class="orch-section">
+            <div style="font-size:.75rem;color:var(--muted);margin-bottom:4px;">Write a Python snippet to chain tool actions. Forbidden ops are blocked at the gateway.</div>
+            <textarea id="orch-script" placeholder="# Example: chain multiple safe operations&#10;data = [1, 2, 3, 4, 5]&#10;total = sum(data)&#10;avg = total / len(data)&#10;print(f'total={total}, avg={avg}')"></textarea>
+            <div class="input-row">
+              <button class="btn purple" onclick="runOrchestration()">▶ Execute Script</button>
+              <button class="btn sm" style="background:var(--border);color:var(--muted)" onclick="loadExample()">Load Example</button>
+            </div>
+            <div class="result-box" id="orch-result"><span class="empty">Script output will appear here.</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Event Feed -->
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Live Event Feed</span>
+          <span class="panel-badge cyan" id="event-count">0 events</span>
+        </div>
+        <div class="panel-body" style="padding:0 22px 16px">
+          <div class="event-feed" id="event-feed">
+            <div style="padding:20px 0;text-align:center;color:var(--muted);font-size:.78rem;font-family:var(--mono)">Waiting for activity…</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Registry table -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">Tool Registry</span>
+        <span class="panel-badge cyan" id="registry-badge">0 tools</span>
+      </div>
+      <div class="panel-body" style="padding:0">
+        <div class="registry-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Category</th>
+                <th>Description</th>
+                <th style="text-align:right">Action</th>
+              </tr>
+            </thead>
+            <tbody id="registry-tbody">
+              <tr><td colspan="4" style="padding:20px;text-align:center;color:var(--muted);font-family:var(--mono);font-size:.78rem">Loading registry…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <footer>
+    <span>Bifrost-MCP Gateway v1.0.0 · <a href="/docs" target="_blank">OpenAPI Docs</a> · <a href="/health" target="_blank">/health</a></span>
+    <span id="footer-ts">—</span>
+  </footer>
+</div>
+
+<script>
+const BASE = '';  // same-origin
+let lastEvents = [];
+let tokenFull = 0;
+let tokenComp = 0;
+
+// ── Utilities ─────────────────────────────────────────────────────────────────
+function fmt(n) {
+  if (n === undefined || n === null || n === '—') return '—';
+  if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M';
+  if (n >= 1_000)     return (n / 1_000).toFixed(1) + 'k';
+  return String(n);
+}
+
+function fmtUptime(s) {
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = Math.floor(s % 60);
+  if (h > 0) return `${h}h ${m}m`;
+  if (m > 0) return `${m}m ${sec}s`;
+  return `${sec}s`;
+}
+
+function syntaxHL(json) {
+  return json
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, m => {
+      if (/^"/.test(m)) {
+        if (/:$/.test(m)) return `<span class="key">${m}</span>`;
+        return `<span class="str">${m}</span>`;
+      }
+      if (/true|false/.test(m)) return `<span class="bool">${m}</span>`;
+      if (/null/.test(m))       return `<span class="val">${m}</span>`;
+      return `<span class="num">${m}</span>`;
+    });
+}
+
+function showToast(msg) {
+  const el = document.createElement('div');
+  el.className = 'toast'; el.textContent = msg;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 4000);
+}
+
+// ── Analytics polling ─────────────────────────────────────────────────────────
+async function fetchAnalytics() {
+  try {
+    const r = await fetch(`${BASE}/analytics`);
+    if (!r.ok) return;
+    const d = await r.json();
+    document.getElementById('s-tokens').textContent   = fmt(d.tokens_saved_total);
+    document.getElementById('s-reqs').textContent     = fmt(d.total_requests);
+    document.getElementById('s-resolves').textContent = fmt(d.schema_resolves);
+    document.getElementById('s-orch').textContent     = fmt(d.orchestrations_run);
+    document.getElementById('s-blocked').textContent  = fmt(d.blocked_scripts);
+    document.getElementById('s-registry').textContent = fmt(d.registry_size);
+    document.getElementById('tok-saved-big').textContent = fmt(d.tokens_saved_total);
+    const cost = ((d.tokens_saved_total / 1_000_000) * 3.0).toFixed(4);
+    document.getElementById('cost-saved').textContent = '$' + cost;
+    document.getElementById('uptime-tag').textContent = 'uptime: ' + fmtUptime(d.uptime_seconds);
+    document.getElementById('status-label').textContent = 'connected';
+    document.getElementById('status-pill').style.setProperty('--success','#10b981');
+    updateEventFeed(d.recent_events || []);
+  } catch(e) {
+    document.getElementById('status-label').textContent = 'offline';
+  }
+  document.getElementById('footer-ts').textContent = new Date().toLocaleTimeString();
+}
+
+// ── Init (token budget) ───────────────────────────────────────────────────────
+async function fetchInit() {
+  try {
+    const r = await fetch(`${BASE}/mcp/init`);
+    const d = await r.json();
+    const a = d.token_audit || {};
+    tokenFull = a.full_registry_tokens || 0;
+    tokenComp = a.compressed_tokens   || 0;
+    document.getElementById('tok-full').textContent = fmt(tokenFull) + ' tok';
+    document.getElementById('tok-comp').textContent = fmt(tokenComp) + ' tok';
+    const pct = Math.max(0, Math.min(100, Math.round((tokenComp / Math.max(tokenFull,1)) * 100)));
+    document.getElementById('bar-comp').style.width = pct + '%';
+    document.getElementById('reduction-badge').textContent = a.reduction_pct + '% reduction';
+  } catch(e) {}
+}
+
+// ── Registry ──────────────────────────────────────────────────────────────────
+async function fetchRegistry() {
+  try {
+    const r = await fetch(`${BASE}/mcp/registry`);
+    const d = await r.json();
+    const tbody = document.getElementById('registry-tbody');
+    document.getElementById('registry-badge').textContent = d.tool_count + ' tools';
+    if (!d.tools.length) {
+      tbody.innerHTML = '<tr><td colspan="4" style="padding:20px;text-align:center;color:var(--muted);font-family:var(--mono);font-size:.78rem">No tools registered.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = d.tools.map(t => `
+      <tr>
+        <td class="name-col">${t.name}</td>
+        <td class="cat-col"><span class="cat-badge ${CSS.escape(t.category)}">${t.category}</span></td>
+        <td class="desc-col" title="${t.description}">${t.description}</td>
+        <td class="action-col"><button class="del-btn" onclick="deleteTool('${t.name}')">remove</button></td>
+      </tr>`).join('');
+  } catch(e) {}
+}
+
+async function deleteTool(name) {
+  if (!confirm(`Remove tool "${name}" from registry?`)) return;
+  const r = await fetch(`${BASE}/mcp/registry/${name}`, { method:'DELETE' });
+  if (r.ok) { fetchRegistry(); fetchAnalytics(); }
+  else { const d = await r.json(); showToast(d.detail || 'Error'); }
+}
+
+// ── Event feed ────────────────────────────────────────────────────────────────
+const ICONS = { init:'🔌', resolve:'🔍', orchestrate:'⚙️', blocked:'🛡️', register:'📦', deregister:'🗑️' };
+
+function updateEventFeed(events) {
+  if (events.length === lastEvents.length &&
+      events[0]?.id === lastEvents[0]?.id) return;
+  lastEvents = events;
+  const feed = document.getElementById('event-feed');
+  document.getElementById('event-count').textContent = events.length + ' events';
+  if (!events.length) return;
+  const reversed = [...events].reverse();
+  feed.innerHTML = reversed.map(e => `
+    <div class="event-item">
+      <div class="event-icon ${e.kind}">${ICONS[e.kind] || '●'}</div>
+      <div class="event-body">
+        <div class="event-detail">${e.detail}</div>
+        <div class="event-time">${new Date(e.ts * 1000).toLocaleTimeString()}
+          ${e.tokens_saved ? ` · saved ~${fmt(e.tokens_saved)} tok` : ''}
+          ${e.matched !== undefined ? ` · ${e.matched} tools matched` : ''}
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+// ── Intent resolver ───────────────────────────────────────────────────────────
+async function resolveIntent() {
+  const intent = document.getElementById('intent-input').value.trim();
+  if (!intent) return;
+  const btn = document.getElementById('resolve-btn');
+  btn.disabled = true; btn.innerHTML = '<span class="spin"></span>Resolving…';
+  const box = document.getElementById('resolve-result');
+  try {
+    const r = await fetch(`${BASE}/mcp/tools/resolve`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_intent: intent })
+    });
+    const d = await r.json();
+
+    // Update hydrated bar
+    const hydTok = d.token_audit?.hydrated_tokens || 0;
+    const hydPct = Math.max(0, Math.min(100, Math.round((hydTok / Math.max(tokenFull,1)) * 100)));
+    document.getElementById('tok-hydr').textContent = fmt(hydTok) + ' tok';
+    document.getElementById('bar-hydr').style.width = hydPct + '%';
+    document.getElementById('hydrated-row').style.display = 'flex';
+
+    box.innerHTML = syntaxHL(JSON.stringify(d, null, 2));
+    fetchAnalytics();
+  } catch(e) {
+    box.innerHTML = `<span style="color:var(--danger)">Request failed: ${e.message}</span>`;
+  }
+  btn.disabled = false; btn.textContent = 'Resolve';
+}
+
+document.getElementById('intent-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') resolveIntent();
+});
+
+// ── Orchestration ─────────────────────────────────────────────────────────────
+async function runOrchestration() {
+  const script = document.getElementById('orch-script').value.trim();
+  if (!script) return;
+  const box = document.getElementById('orch-result');
+  box.innerHTML = '<span class="spin"></span> Executing…';
+  try {
+    const r = await fetch(`${BASE}/mcp/tools/orchestrate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ script })
+    });
+    const d = await r.json();
+    if (r.status === 403) {
+      box.innerHTML = `<span style="color:var(--danger)">🛡️ Security blocked: ${d.detail}</span>`;
+    } else if (d.status === 'success') {
+      box.innerHTML = `<span style="color:var(--success)">✓ stdout:</span>\n${d.stdout || '(no output)'}`;
+    } else {
+      box.innerHTML = `<span style="color:var(--danger)">✗ error:</span>\n${d.stderr || d.error || JSON.stringify(d)}`;
+    }
+    fetchAnalytics();
+  } catch(e) {
+    box.innerHTML = `<span style="color:var(--danger)">Request failed: ${e.message}</span>`;
+  }
+}
+
+function loadExample() {
+  document.getElementById('orch-script').value =
+`# Safe multi-step data pipeline example
+import math, json
+
+records = [
+    {"name": "Tool A", "latency_ms": 142},
+    {"name": "Tool B", "latency_ms": 88},
+    {"name": "Tool C", "latency_ms": 210},
+    {"name": "Tool D", "latency_ms": 65},
+]
+
+latencies = [r["latency_ms"] for r in records]
+avg  = sum(latencies) / len(latencies)
+p95  = sorted(latencies)[int(len(latencies) * 0.95)]
+stdv = math.sqrt(sum((x - avg)**2 for x in latencies) / len(latencies))
+
+result = {
+    "count":   len(records),
+    "avg_ms":  round(avg, 2),
+    "p95_ms":  p95,
+    "stdev":   round(stdv, 2),
+}
+print(json.dumps(result, indent=2))`;
+}
+
+// ── Boot ──────────────────────────────────────────────────────────────────────
+(async () => {
+  await Promise.all([fetchInit(), fetchAnalytics(), fetchRegistry()]);
+  setInterval(fetchAnalytics, 3000);
+  setInterval(fetchRegistry,  10000);
+})();
+</script>
+</body>
+</html>
