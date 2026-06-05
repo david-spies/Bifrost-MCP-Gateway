@@ -1,4 +1,20 @@
-![Bifrost-MCP-Gateway](docs/bifrost_mcp_banner.svg)
+![Bifrost-MCP-Gateway](docs/bifrost_banner.svg)
+<!-- Badges -->
+<p align="center">
+  <img alt="Python" src="https://img.shields.io/badge/Python-3.10%2B-3776AB?style=flat-square&logo=python&logoColor=white" />
+  <img alt="FastAPI" src="https://img.shields.io/badge/FastAPI-0.115-009688?style=flat-square&logo=fastapi&logoColor=white" />
+  <img alt="MCP Protocol" src="https://img.shields.io/badge/MCP-2026.1-00E5FF?style=flat-square&logoColor=white" />
+  <img alt="License MIT" src="https://img.shields.io/badge/License-MIT-7C3AED?style=flat-square" />
+  <img alt="Token Savings" src="https://img.shields.io/badge/Token%20Savings-up%20to%2090%25-10B981?style=flat-square" />
+</p>
+
+<p align="center">
+  <img alt="OWASP Hardened" src="https://img.shields.io/badge/OWASP%20Agentic%20Top%2010-Hardened-EF4444?style=flat-square&logo=owasp&logoColor=white" />
+  <img alt="Zero Vector DB" src="https://img.shields.io/badge/Vector%20DB-None%20Required-F59E0B?style=flat-square" />
+  <img alt="Deployment" src="https://img.shields.io/badge/Deploy-Single%20Script-00E5FF?style=flat-square" />
+  <img alt="Tests" src="https://img.shields.io/badge/Tests-19%20passing-10B981?style=flat-square&logo=pytest&logoColor=white" />
+  <img alt="Agents" src="https://img.shields.io/badge/Works%20With-Claude%20Code%20%7C%20Gemini%20CLI-7C3AED?style=flat-square" />
+</p>
 
 # ⚡ Bifrost-MCP Gateway
 
