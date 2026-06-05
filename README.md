@@ -1,4 +1,4 @@
-![Bifrost-MCP-Gateway](docs/bifrost_banner.svg)
+![Bifrost-MCP-Gateway](docs/bifrost-banner.svg)
 <!-- Badges -->
 <p align="center">
   <img alt="Python" src="https://img.shields.io/badge/Python-3.10%2B-3776AB?style=flat-square&logo=python&logoColor=white" />
